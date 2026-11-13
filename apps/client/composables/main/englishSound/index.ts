@@ -17,9 +17,12 @@ export function useCurrentStatementEnglishSound() {
 
   watchEffect(() => {
     const word = courseStore.currentStatement?.english;
+    // 课程还没加载完成时不要用空文本去请求发音
+    if (!word) return;
+
     const pronunciationUrl = getPronunciationUrl(word);
     if (lastPronunciationUrl !== pronunciationUrl) {
-      updateSource(pronunciationUrl);
+      updateSource(pronunciationUrl, word);
     }
     lastPronunciationUrl = pronunciationUrl;
   });
@@ -38,13 +41,17 @@ export function useCurrentStatementEnglishSound() {
 
 // 朗读每日一句
 export function readOneSentencePerDayAloud(str: string) {
+  if (!str) return;
+
   const pronunciationUrl = getPronunciationUrl(str);
-  updateSource(pronunciationUrl);
+  updateSource(pronunciationUrl, str);
   play();
 }
 
 export function playEnglish(english: string) {
+  if (!english) return;
+
   const pronunciationUrl = getPronunciationUrl(english);
-  updateSource(pronunciationUrl);
+  updateSource(pronunciationUrl, english);
   play();
 }
