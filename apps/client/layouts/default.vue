@@ -1,6 +1,7 @@
 <template>
   <div
     class="h-full w-full bg-white text-slate-600 transition-colors dark:bg-theme-dark dark:text-slate-300"
+    :style="tintStyle"
   >
     <div class="m-auto flex h-fit min-h-screen flex-col items-center">
       <Navbar />
@@ -18,5 +19,8 @@
 </template>
 
 <script setup lang="ts">
+import { useBackgroundTint } from "~/composables/user/backgroundTint";
 import FoundingMemberNotice from "../components/FoundingMemberNotice.vue";
+
+const { tintStyle } = useBackgroundTint();
 </script>

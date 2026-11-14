@@ -56,6 +56,23 @@
           今天一共学习 <span class="text-purple-500">{{ formattedMinutes }}分钟</span> 啦！
           <span v-if="totalMinutes >= 30">太强了，给自己来点掌声 😄</span>
         </p>
+
+        <div
+          v-if="sessionResult"
+          class="mt-2 pl-2 text-xs leading-loose sm:pl-4 sm:text-sm lg:pl-14 lg:text-base"
+        >
+          <span class="text-gray-500 dark:text-gray-400">
+            {{ MODE_LABELS[learningPathStore.currentMode] }} ·
+            {{ DIFFICULTY_LABELS[learningPathStore.currentDifficulty] }}
+          </span>
+          <span class="ml-2 font-semibold text-amber-500">
+            {{ sessionResult.rank }} ·{{ " " }}
+            <span>{{ starsText }}</span>
+          </span>
+          <span class="ml-2 text-gray-400">
+            正确率 {{ Math.round(accuracy * 100) }}% · 今日剩余 {{ sessionResult.remaining }} 条
+          </span>
+        </div>
       </div>
       <div className="modal-action flex flex-col sm:flex-row gap-2 justify-center sm:justify-end">
         <button
@@ -77,6 +94,13 @@
           课程列表
         </button>
         <button
+          v-if="isAuthenticated()"
+          class="btn w-full sm:w-auto"
+          @click="goToReview"
+        >
+          去复习
+        </button>
+        <button
           class="btn w-full sm:w-auto"
           @click="goToNextCourse"
         >
@@ -94,10 +118,12 @@
 </template>
 
 <script setup lang="ts">
-import { useModal } from "#imports";
+import { navigateTo, useModal } from "#imports";
 import { computed, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 
+import { postCompleteSession } from "~/api/learning-path";
+import { postEnqueueReview } from "~/api/review";
 import Dialog from "~/components/common/Dialog.vue";
 import { useActiveCourseMap } from "~/composables/courses/activeCourse";
 import { courseTimer } from "~/composables/courses/courseTimer";
@@ -105,6 +131,7 @@ import { useConfetti } from "~/composables/main/confetti/useConfetti";
 import { readOneSentencePerDayAloud } from "~/composables/main/englishSound";
 import { useGameMode } from "~/composables/main/game";
 import { useLearningTimeTracker } from "~/composables/main/learningTimeTracker";
+import { useSessionStats } from "~/composables/main/sessionStats";
 import { useShareModal } from "~/composables/main/shareImage/share";
 import { useDailySentence, useSummary } from "~/composables/main/summary";
 import { useNavigation } from "~/composables/useNavigation";
@@ -112,6 +139,7 @@ import { isAuthenticated, signIn } from "~/services/auth";
 import { useCourseStore } from "~/store/course";
 import { useCoursePackStore } from "~/store/coursePack";
 import { useGameStore } from "~/store/game";
+import { DIFFICULTY_LABELS, MODE_LABELS, useLearningPathStore } from "~/store/learningPath";
 import { permitSaveStatement, preventSaveStatement } from "~/store/statement";
 import { formatSecondsToTime } from "~/utils/date";
 import { cancelShortcut, registerShortcut } from "~/utils/keyboardShortcuts";
@@ -131,6 +159,60 @@ const { totalMinutes, formattedMinutes } = useTotalLearningTime();
 
 const gameStore = useGameStore();
 const modal = useModal();
+const learningPathStore = useLearningPathStore();
+const { accuracy } = useSessionStats();
+
+const sessionResult = ref<{ rank: string; stars: number; remaining: number } | null>(null);
+const starsText = computed(() => {
+  const stars = sessionResult.value?.stars ?? 0;
+  return `${"★".repeat(stars)}${"☆".repeat(Math.max(3 - stars, 0))}`;
+});
+
+/** 按“每题平均用时”给评级，难度越高要求越严 */
+const RANK_THRESHOLDS: Record<string, { S: number; A: number; B: number }> = {
+  beginner: { S: 8, A: 14, B: 22 },
+  intermediate: { S: 7, A: 12, B: 20 },
+  advanced: { S: 6, A: 10, B: 18 },
+};
+
+function computeRank() {
+  const total = courseTimer.totalRecordNumber() || 1;
+  const secondsPerQuestion = courseTimer.calculateTotalTime() / total;
+  const threshold =
+    RANK_THRESHOLDS[learningPathStore.currentDifficulty] ?? RANK_THRESHOLDS.beginner;
+  const acc = accuracy.value;
+
+  if (acc >= 0.95 && secondsPerQuestion <= threshold.S) return "S";
+  if (acc >= 0.9 && secondsPerQuestion <= threshold.A) return "A";
+  if (acc >= 0.8 && secondsPerQuestion <= threshold.B) return "B";
+  if (acc >= 0.7) return "C";
+  return "D";
+}
+
+async function reportSession() {
+  if (!isAuthenticated() || !courseStore.currentCourse) return;
+  const coursePackId = courseStore.currentCourse.coursePackId;
+  const courseId = courseStore.currentCourse.id;
+
+  try {
+    sessionResult.value = await postCompleteSession(coursePackId, {
+      courseId,
+      mode: learningPathStore.currentMode,
+      difficulty: learningPathStore.currentDifficulty,
+      rank: computeRank(),
+      statementCount: courseTimer.totalRecordNumber(),
+    });
+    await learningPathStore.refreshLimits(coursePackId);
+  } catch (error) {
+    console.warn("上报练习结果失败", error);
+  }
+
+  try {
+    await postEnqueueReview(coursePackId, courseId);
+  } catch (error) {
+    console.warn("加入复习队列失败", error);
+  }
+}
 
 watch(showModal, (val) => {
   if (val) {
@@ -142,6 +224,8 @@ watch(showModal, (val) => {
     registerShortcut("enter", goToNextCourse);
     // 显示结算面板代表当前课程已经完成
     completeCourse();
+    // 上报本次练习成绩（模式/难度/评级/星级/每日额度）
+    reportSession();
     // 朗读每日一句
     soundSentence();
     // 延迟一小会放彩蛋
@@ -151,6 +235,7 @@ watch(showModal, (val) => {
       playConfetti();
     }, 300);
   } else {
+    sessionResult.value = null;
     // 取消回车键进入下一课
     cancelShortcut("enter", goToNextCourse);
     permitSaveStatement();
@@ -277,4 +362,11 @@ function useCourse() {
 const toShare = () => {
   showShareModal();
 };
+
+function goToReview() {
+  const coursePackId = courseStore.currentCourse?.coursePackId;
+  if (!coursePackId) return;
+  hideSummary();
+  navigateTo(`/review/${coursePackId}`);
+}
 </script>

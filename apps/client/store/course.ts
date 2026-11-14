@@ -123,17 +123,23 @@ export const useCourseStore = defineStore("course", () => {
     return res;
   }
 
-  async function setup(coursePackId: string, courseId: string) {
+  async function setup(
+    coursePackId: string,
+    courseId: string,
+    options?: { skipAutoSave?: boolean },
+  ) {
     let course = await fetchCourse(coursePackId, courseId);
 
     course.statements = markMasteredElements(course.statements);
 
     currentCourse.value = course;
-    if (isAuthenticated()) {
+    if (isAuthenticated() && !options?.skipAutoSave) {
       setupAutoSaveProgress(currentCourse);
       if (statementIndex.value === 0) {
         resetStatementIndex();
       }
+    } else {
+      statementIndex.value = 0;
     }
   }
 

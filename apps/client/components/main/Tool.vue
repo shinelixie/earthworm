@@ -25,6 +25,33 @@
 
     <!-- 右侧 -->
     <div class="flex items-center gap-4">
+      <div @click="toggleGrammarAnalysis">
+        <UTooltip :text="isGrammarVisible ? '隐藏语法分析' : '显示语法分析'">
+          <UIcon
+            name="i-ph-tree-structure"
+            :class="['clickable-item h-6 w-6', { 'text-fuchsia-500': isGrammarVisible }]"
+          />
+        </UTooltip>
+      </div>
+
+      <div @click="volumeModal?.open()">
+        <UTooltip :text="`音量 ${volume}%`">
+          <UIcon
+            :name="volumeIcon"
+            class="clickable-item h-6 w-6"
+          />
+        </UTooltip>
+      </div>
+
+      <div @click="backgroundTintModal?.open()">
+        <UTooltip text="背景色调">
+          <UIcon
+            name="i-ph-palette"
+            class="clickable-item h-6 w-6"
+          />
+        </UTooltip>
+      </div>
+
       <div
         @click="openGameSettingModal"
         v-if="isDictationMode()"
@@ -71,6 +98,8 @@
     </div>
 
     <MainCourseContents v-model:isOpen="isOpenCourseContents"></MainCourseContents>
+    <MainBackgroundTintModal ref="backgroundTintModal" />
+    <MainVolumeModal ref="volumeModal" />
   </div>
 
   <CommonProgressBar
@@ -88,6 +117,7 @@ import Dialog from "~/components/common/Dialog.vue";
 import { useQuestionInput } from "~/components/main/QuestionInput/questionInputHelper";
 import { courseTimer } from "~/composables/courses/courseTimer";
 import { useGameMode } from "~/composables/main/game";
+import { useGrammarAnalysis } from "~/composables/main/grammarAnalysis";
 import { clearQuestionInput } from "~/composables/main/question";
 import { useCourseContents } from "~/composables/main/useCourseContents";
 import { useGamePause } from "~/composables/main/useGamePause";
@@ -95,11 +125,16 @@ import { useGameSetting } from "~/composables/main/useGameSetting";
 import { useRanking } from "~/composables/rank/rankingList";
 import { useGamePlayMode } from "~/composables/user/gamePlayMode";
 import { parseShortcut, useShortcutKeyMode } from "~/composables/user/shortcutKey";
+import { useVolume } from "~/composables/user/volume";
 import { isAuthenticated } from "~/services/auth";
 import { useCourseStore } from "~/store/course";
 
 const { shortcutKeys } = useShortcutKeyMode();
 const { isDictationMode } = useGamePlayMode();
+const { isVisible: isGrammarVisible, toggle: toggleGrammarAnalysis } = useGrammarAnalysis();
+const { volume, icon: volumeIcon } = useVolume();
+const backgroundTintModal = ref();
+const volumeModal = ref();
 const rankingStore = useRanking();
 const courseStore = useCourseStore();
 const { focusInput } = useQuestionInput();

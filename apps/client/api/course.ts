@@ -8,6 +8,7 @@ export interface StatementApiResponse {
   english: string;
   soundmark: string;
   isMastered: boolean;
+  analysis?: import("~/types/models/statement-analysis").StatementAnalysis | null;
 }
 
 export interface CourseApiResponse {

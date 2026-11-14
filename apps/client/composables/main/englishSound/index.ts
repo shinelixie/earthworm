@@ -13,7 +13,7 @@ let lastPronunciationUrl = "";
 export function useCurrentStatementEnglishSound() {
   const courseStore = useCourseStore();
   const { toolBarData } = useToolbar();
-  const { isDictationMode } = useGamePlayMode();
+  const { isAudioFirstMode } = useGamePlayMode();
 
   watchEffect(() => {
     const word = courseStore.currentStatement?.english;
@@ -29,7 +29,7 @@ export function useCurrentStatementEnglishSound() {
 
   return {
     playSound: (options?: PlayOptions) => {
-      if (isDictationMode()) {
+      if (isAudioFirstMode()) {
         const { times, rate, interval } = toolBarData;
         return play({ times, rate, interval });
       } else {

@@ -1,6 +1,7 @@
 import { courseTimer } from "~/composables/courses/courseTimer";
 import { useGameMode } from "~/composables/main/game";
 import { useInput } from "~/composables/main/question";
+import { useSessionStats } from "~/composables/main/sessionStats";
 import { useSummary } from "~/composables/main/summary";
 import { useAutoNextQuestion } from "~/composables/user/autoNext";
 import { useKeyboardSound } from "~/composables/user/sound";
@@ -19,6 +20,7 @@ export function useWrapperQuestionInput() {
   const { isKeyboardSoundEnabled } = useKeyboardSound();
   const { checkPlayTypingSound, playTypingSound } = useTypingSound();
   const { handleAnswerError } = useAnswerError();
+  const { recordCorrect, recordWrong } = useSessionStats();
   const { playRightSound } = usePlayTipSound();
   const { isAutoNextQuestion } = useAutoNextQuestion();
   const { isUseSpaceSubmitAnswer } = useSpaceSubmitAnswer();
@@ -46,6 +48,7 @@ export function useWrapperQuestionInput() {
   }
 
   function handleAnswerRight() {
+    recordCorrect();
     courseTimer.timeEnd(String(courseStore.statementIndex)); // 停止当前题目的计时
     playRightSound();
 
@@ -61,6 +64,11 @@ export function useWrapperQuestionInput() {
     }
   }
 
+  function handleAnswerErrorWithStats() {
+    recordWrong();
+    handleAnswerError();
+  }
+
   return {
     initializeQuestionInput,
     isFixMode,
@@ -69,7 +77,7 @@ export function useWrapperQuestionInput() {
     inputValue,
     setInputValue,
     submitAnswer() {
-      submitAnswer(handleAnswerRight, handleAnswerError);
+      submitAnswer(handleAnswerRight, handleAnswerErrorWithStats);
       focusInput();
     },
     handleKeyboardInput(e: KeyboardEvent) {
@@ -77,7 +85,7 @@ export function useWrapperQuestionInput() {
         useSpaceSubmitAnswer: {
           enable: isUseSpaceSubmitAnswer(),
           rightCallback: handleAnswerRight,
-          errorCallback: handleAnswerError,
+          errorCallback: handleAnswerErrorWithStats,
         },
       });
     },

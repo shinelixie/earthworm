@@ -15,6 +15,17 @@
     <h3 class="text-base font-bold">
       {{ title }}
     </h3>
+    <div
+      v-if="starCount > 0"
+      class="mt-1 text-sm text-amber-500"
+      :title="`已获得 ${starCount} 星`"
+    >
+      <span
+        v-for="n in 3"
+        :key="n"
+        >{{ n <= starCount ? "★" : "☆" }}</span
+      >
+    </div>
     <p
       class="mt-4 line-clamp-3 text-sm text-gray-500 dark:text-gray-400"
       :title="description"
@@ -49,10 +60,12 @@ const props = defineProps<{
   count: number | undefined;
   coursePackId: string;
   description: string;
+  stars?: number;
 }>();
 const { activeCourseMap } = useActiveCourseMap();
 
 const activeCourseRef = ref<HTMLDivElement>();
+const starCount = computed(() => props.stars ?? 0);
 const hasFinished = computed(() => !!props.count);
 const isActiveCourse = computed(() => activeCourseMap.value[props.coursePackId] == props.id);
 const dataTip = computed(() => `恭喜您，当前课程已完成 ${props.count} 次 🎉`);

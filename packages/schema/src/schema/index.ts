@@ -7,3 +7,5 @@ export * from "./membership";
 export * from "./coursePack";
 export * from "./userLearningActivities";
 export * from "./masteredElements";
+export * from "./learningPath";
+export * from "./reviewCard";

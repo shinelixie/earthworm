@@ -47,11 +47,12 @@ export async function createCoursePack(coursePackInfo: CreateCoursePack) {
       courseIds.push(courseEntity.id.toString());
 
       const createStatementTasks = course.statements.map(
-        ({ chinese, english, phonetic }, sIndex) => {
+        ({ chinese, english, phonetic, analysis }, sIndex) => {
           return tx.insert(statementSchema).values({
             chinese,
             english,
             soundmark: phonetic,
+            analysis,
             order: sIndex + 1,
             courseId: courseEntity.id,
           });
@@ -183,11 +184,12 @@ export async function updateCoursePack(coursePackId: string, coursePackInfo: Upd
           courseIds.push(courseEntity.id.toString());
 
           const createStatementTasks = newCourseInfo.statements.map(
-            async ({ chinese, english, phonetic }, sIndex) => {
+            async ({ chinese, english, phonetic, analysis }, sIndex) => {
               return tx.insert(statementSchema).values({
                 chinese,
                 english,
                 soundmark: phonetic,
+                analysis,
                 order: sIndex + 1,
                 courseId: courseEntity.id,
               });
@@ -248,6 +250,7 @@ export async function updateCoursePack(coursePackId: string, coursePackInfo: Upd
             english: newStatementInfo.english,
             chinese: newStatementInfo.chinese,
             soundmark: newStatementInfo.phonetic,
+            analysis: newStatementInfo.analysis,
           })
           .where(eq(statementSchema.id, oldStatement.id));
 
@@ -262,6 +265,7 @@ export async function updateCoursePack(coursePackId: string, coursePackInfo: Upd
           english: newStatementInfo.english,
           chinese: newStatementInfo.chinese,
           soundmark: newStatementInfo.phonetic,
+          analysis: newStatementInfo.analysis,
           order: newIndex + 1,
           courseId,
         });
