@@ -2,6 +2,16 @@ export interface Statement {
   english: string;
   phonetic: string;
   chinese: string;
+  /** 可选：句子语法成分分析 */
+  analysis?: {
+    segments: {
+      role: string;
+      roleEn: string;
+      text: string;
+      explanation: string;
+      words: { text: string; phonetic: string; meaning: string; pos: string }[];
+    }[];
+  };
 }
 
 interface Course {
