@@ -1,4 +1,5 @@
 import { usePronunciation } from "~/composables/user/pronunciation";
+import { getEffectiveVolume } from "~/composables/user/volume";
 
 export interface PlayOptions {
   times?: number;
@@ -53,6 +54,7 @@ function speakWithBrowserTTS(text: string, options: Required<PlayOptions>) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-US";
     utterance.rate = rate;
+    utterance.volume = getEffectiveVolume();
     utterance.onend = () => {
       index++;
       if (cancelled || index >= times) return;
@@ -91,6 +93,7 @@ export function usePlayWordSound() {
       return;
     }
     lastWord = word;
+    wordAudio.volume = getEffectiveVolume();
     wordAudio.src = getPronunciationUrl(word);
     wordAudio.play().catch((error: DOMException) => {
       if (error?.name !== "NotSupportedError") return;
@@ -117,6 +120,7 @@ export function play(playOptions?: PlayOptions) {
   let timeoutId: NodeJS.Timeout | undefined;
 
   audio.playbackRate = rate;
+  audio.volume = getEffectiveVolume();
 
   const playPromise = audio.play();
   playPromise?.catch((error: DOMException) => {

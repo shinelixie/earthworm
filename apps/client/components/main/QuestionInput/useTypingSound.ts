@@ -4,6 +4,7 @@ import { ref } from "vue";
 import errorSoundPath from "~/assets/sounds/error.mp3";
 import rightSoundPath from "~/assets/sounds/right.mp3";
 import typingSoundPath from "~/assets/sounds/typing.mp3";
+import { getEffectiveVolume } from "~/composables/user/volume";
 
 // 正确提示音
 const rightAudio = new Audio(rightSoundPath);
@@ -12,10 +13,12 @@ const errorAudio = new Audio(errorSoundPath);
 
 export function usePlayTipSound() {
   function playRightSound() {
+    rightAudio.volume = getEffectiveVolume();
     rightAudio.play();
   }
 
   function playErrorSound() {
+    errorAudio.volume = getEffectiveVolume();
     errorAudio.play();
   }
 
@@ -63,12 +66,19 @@ export function useTypingSound() {
 
     const source = audioCtxRef.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(audioCtxRef.destination);
+
+    // 走 GainNode 才能跟随全局音量
+    const gain = audioCtxRef.createGain();
+    gain.gain.value = getEffectiveVolume();
+    source.connect(gain);
+    gain.connect(audioCtxRef.destination);
+
     source.start();
     lastPlayTime.value = now;
     // 当音频播放结束，手动释放资源
     source.onended = () => {
       source.disconnect();
+      gain.disconnect();
     };
   }
 

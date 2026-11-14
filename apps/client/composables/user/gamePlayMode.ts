@@ -3,11 +3,13 @@ import { ref } from "vue";
 export enum GamePlayMode {
   Dictation = "DICTATION",
   ChineseToEnglish = "CHINESE_TO_ENGLISH",
+  Listening = "LISTENING",
 }
 
 export const gamePlayModeLabels: { [key in GamePlayMode]: string } = {
   [GamePlayMode.ChineseToEnglish]: "中译英",
   [GamePlayMode.Dictation]: "听写",
+  [GamePlayMode.Listening]: "听力",
 };
 
 const GamePlayModeKey = "gamePlayMode";
@@ -51,11 +53,46 @@ export function useGamePlayMode() {
     return currentGamePlayMode.value === GamePlayMode.ChineseToEnglish;
   }
 
+  function isListeningMode() {
+    return currentGamePlayMode.value === GamePlayMode.Listening;
+  }
+
+  /** 先出声后作答的模式（听写 / 听力），播放参数走听写工具栏 */
+  function isAudioFirstMode() {
+    return isDictationMode() || isListeningMode();
+  }
+
   return {
     toggleGamePlayMode,
     getGamePlayModeOptions,
     currentGamePlayMode,
     isDictationMode,
     isChineseToEnglishMode,
+    isListeningMode,
+    isAudioFirstMode,
   };
+}
+
+/** 服务端模式名 -> 本地 GamePlayMode */
+export function toGamePlayMode(mode: string): GamePlayMode {
+  switch (mode) {
+    case "dictation":
+      return GamePlayMode.Dictation;
+    case "listening":
+      return GamePlayMode.Listening;
+    default:
+      return GamePlayMode.ChineseToEnglish;
+  }
+}
+
+/** 本地 GamePlayMode -> 服务端模式名 */
+export function toPracticeMode(mode: GamePlayMode): string {
+  switch (mode) {
+    case GamePlayMode.Dictation:
+      return "dictation";
+    case GamePlayMode.Listening:
+      return "listening";
+    default:
+      return "chinese_to_english";
+  }
 }
